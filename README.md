@@ -1,1 +1,2 @@
 # FlexTbl
+This repo first presents, FlexTbl, a DSL designed in Racket which specify what we want to realize through an iptable. Then, a code generator is used to generate an eBPF implementation that replace iptable's functionality.
