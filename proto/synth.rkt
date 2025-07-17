@@ -1,8 +1,11 @@
 #lang rosette
 
+(require rosette/lib/synthax)
+
 ; Our DSL
 (define rules
   '((tcp 22 ACCEPT)
+    (udp 53 ACCEPT)
   ))
 
 ;; tcp -> 1; udp -> 0
@@ -37,6 +40,7 @@
 
 ; Synthesizing
 (define-symbolic x y integer?)
+
 (define-symbolic x_match integer?)
 (define-symbolic y_match integer?)
 (define (Impl x y)
@@ -50,17 +54,41 @@
 
 
 
-(define sol
+;;; (define sol
+;;;   (synthesize
+;;;    #:forall (list x y)
+;;;    #:guarantee
+;;;    (assert (equal? spec_result impl_result))))
+
+;;; (define x_val (evaluate x_match sol))
+;;; (define y_val (evaluate y_match sol))
+
+;;; ;; Code generation
+;;; (define result-code
+;;;   (format "if (x == ~a && y == ~a) return 1; else return 0;" x_val y_val))
+
+;;; (displayln result-code)
+
+
+(define-grammar (Impl_grammar x y)
+  [expr
+   (choose
+    (if (bexpr) (expr) (expr))
+    x
+    y
+    (?? integer?))]
+  [bexpr
+   (choose
+    (= (expr) (expr))
+    (and (bexpr) (bexpr))
+    (or (bexpr) (bexpr)))])
+
+(define solution
   (synthesize
    #:forall (list x y)
-   #:guarantee
-   (assert (equal? spec_result impl_result))))
+   #:guarantee (= (Spec x y) (Impl_grammar x y))))
 
-(define x_val (evaluate x_match sol))
-(define y_val (evaluate y_match sol))
+(define impl-evaluated
+  (evaluate (Impl_grammar x y) solution))
 
-;; Code generation
-(define result-code
-  (format "if (x == ~a && y == ~a) return 1; else return 0;" x_val y_val))
-
-(displayln result-code)
+(displayln impl-evaluated)
