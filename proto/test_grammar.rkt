@@ -94,7 +94,7 @@
 
 (define sol
     (synthesize
-     #:forall    (list l)
+     #:forall    (list l h)
      #:guarantee (assert (equal? (impl-fast l h) (Spec l h)))))
 sol
 (print-forms sol)
