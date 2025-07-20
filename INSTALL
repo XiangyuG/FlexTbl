@@ -9,6 +9,8 @@ This document provides instructions on how to install and set up the project.
 ## Installation Steps
 
 1.  **Install racket:**
-* Follow instructions in the website https://docs.racket-lang.org/getting-started/. My script is the following:
+* Follow instructions in the website https://docs.racket-lang.org/getting-started/. I use this file (https://download.racket-lang.org/installers/8.17/racket-8.17-x86_64-linux-cs.sh). My script is the following:
     ```bash
-    bash install_file/racket-8.17-x86_64-linux-cs.sh
+    cd install_file
+    wget https://download.racket-lang.org/installers/8.17/racket-8.17-x86_64-linux-cs.shhttps://download.racket-lang.org/installers/8.17/racket-8.17-x86_64-linux-cs.sh
+    bash racket-8.17-x86_64-linux-cs.sh
