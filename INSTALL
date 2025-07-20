@@ -1,2 +1,14 @@
-sudo apt update
-sudo apt install -y racket
+# Installation Instructions
+
+This document provides instructions on how to install and set up the project.
+
+## Prerequisites
+
+*   Necessary software or tools (e.g., Racket, Rosette)
+
+## Installation Steps
+
+1.  **Install racket:**
+* Follow instructions in the website https://docs.racket-lang.org/getting-started/. My script is the following:
+    ```bash
+    bash install_file/racket-8.17-x86_64-linux-cs.sh
