@@ -7,31 +7,7 @@
          bv-const?)
 
 (define rosette-func-body
-  ;;; '(if (and (equal? lo lo) (equal? (bv #x00080000 32) (bv #x00000000 32)))
-  ;;;   (bv #x00000000 32)
-  ;;;   (if (and (equal? (bv #x00000016 32) hi) (equal? (bv #x00000001 32) lo))
-  ;;;     lo
-  ;;;     (bv #x00000000 32))))
-
-  ;;; '(if (and (equal?
-  ;;;           (if (and (equal? hi (bv #x00000010 32)) (equal? hi hi))
-  ;;;             (bv #x00000000 32)
-  ;;;             hi)
-  ;;;           (bv #x00000016 32))
-  ;;;          (equal?
-  ;;;           (if (and (equal? (bv #x00000001 32) lo)
-  ;;;                    (equal? (bv #x00000001 32) lo))
-  ;;;             lo
-  ;;;             (bv #x00000000 32))
-  ;;;           lo))
-  ;;;   (if (and (equal? lo lo) (equal? (bv #xffffffe9 32) hi))
-  ;;;     (bv #x00000000 32)
-  ;;;     (bv #x00000001 32))
-  ;;;   (bv #x00000000 32)))
-  '(if (and (equal? lo (bv #x00000001 32))
-           (equal? (bv #x00000000 32) (bv #x00000000 32)))
-    (if (equal? hi (bv #x00000016 32)) (bv #x00000001 32) (bv #x00000000 32))
-    (if (equal? (bv #x00000200 32) hi) (bv #x00000000 32) (bv #x00000000 32))))
+  '(if (equal? hi (bv #x00000016 32)) (bv #x00000001 32) (bv #x00000000 32)))
 
 
 
