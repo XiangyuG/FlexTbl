@@ -6,8 +6,13 @@
          indent-str
          bv-const?)
 
+;; Output from synthesis result
 (define rosette-func-body
-  '(if (equal? hi (bv #x00000016 32)) (bv #x00000001 32) (bv #x00000000 32)))
+  '(if (and (and (equal? (bv #x00000001 32) (bv #x00000001 32))
+                (equal? (bv #x00000000 32) (bv #x00000000 32)))
+           (and (equal? proto proto) (equal? port (bv #x00000016 32))))
+    (bv #x00000001 32)
+    (bv #x00000000 32)))
 
 
 
@@ -61,8 +66,15 @@
             [else
                 (format "(~a - ~a)" (expr->c a indent-level) (expr->c b indent-level))])]
 
+    ;;; [(list 'equal? a b)
+    ;;;  (format "(~a == ~a)" (expr->c a indent-level) (expr->c b indent-level))]
     [(list 'equal? a b)
-     (format "(~a == ~a)" (expr->c a indent-level) (expr->c b indent-level))]
+ (cond
+   [(and (equal? a 'proto) (equal? b '(bv 1 32))) "proto == IPPROTO_TCP"]
+   [(and (equal? a 'proto) (equal? b '(bv 0 32))) "proto == IPPROTO_UDP"]
+   [(and (equal? b 'proto) (equal? a '(bv 1 32))) "proto == IPPROTO_TCP"]
+   [(and (equal? b 'proto) (equal? a '(bv 0 32))) "proto == IPPROTO_UDP"]
+   [else (format "(~a == ~a)" (expr->c a indent-level) (expr->c b indent-level))])]
 
     [(list 'and a b)
      (format "(~a && ~a)" (expr->c a indent-level) (expr->c b indent-level))]
