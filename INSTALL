@@ -13,3 +13,4 @@ This document provides instructions on how to install and set up the project.
     ```bash
     cd install_file
     sudo bash racket-8.17-x86_64-linux-cs.sh
+    raco pkg install rosette
