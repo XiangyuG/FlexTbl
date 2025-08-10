@@ -9,24 +9,26 @@
 (require (only-in racket/base string->number))
 (require (only-in racket/base error))
 
+(require json racket/port racket/match)
+
 (define int32? (bitvector 32))
 (define (int32 i) (bv i int32?))
 
 
 (struct Rule (match action rewrite) #:transparent)
 
-(struct Match (src dst proto sport dport) #:transparent)
+(struct Match (srcip dstip proto sport dport) #:transparent)
 (struct Rewrite (new-src new-dst new-sport new-dport) #:transparent)
 
-(struct packet (src dst proto sport dport) #:transparent)
+(struct packet (srcip dstip proto sport dport) #:transparent)
 
 
 (define (match? pkt m)
   (and
-   (or (equal? (Match-src m) #f)
-       (equal? (packet-src pkt) (Match-src m)))
-   (or (equal? (Match-dst m) #f)
-       (equal? (packet-dst pkt) (Match-dst m)))
+   (or (equal? (Match-srcip m) #f)
+       (equal? (packet-srcip pkt) (Match-srcip m)))
+   (or (equal? (Match-dstip m) #f)
+       (equal? (packet-dstip pkt) (Match-dstip m)))
    (or (equal? (Match-proto m) #f)
        (equal? (packet-proto pkt) (Match-proto m)))
    (or (equal? (Match-sport m) #f)
@@ -38,8 +40,8 @@
 (define (eval-packet pkt rules)
   (define (apply-rewrite pkt rw)
     (packet
-     (or (Rewrite-new-src rw) (packet-src pkt))
-     (or (Rewrite-new-dst rw) (packet-dst pkt))
+     (or (Rewrite-new-src rw) (packet-srcip pkt))
+     (or (Rewrite-new-dst rw) (packet-dstip pkt))
      (packet-proto pkt)
      (or (Rewrite-new-sport rw) (packet-sport pkt))
      (or (Rewrite-new-dport rw) (packet-dport pkt))))
@@ -86,7 +88,7 @@
 
 (define pkt (packet (ip->int32 "10.0.0.0") (ip->int32 "10.0.0.101") (int32 1) (int32 12345) (int32 80)))
 
-(car (eval-packet pkt rules)) ; → 'accept
+;;; (car (eval-packet pkt rules)) ; → 'accept
 
 
 (define test-pkt
@@ -104,7 +106,6 @@
 
 ;; evaluate with existing rules
 (define result (eval-packet sym-pkt rules))
-result
 (define action (car result))
 
 
@@ -183,5 +184,4 @@ result
   (with-output-to-string
     (lambda () (print-forms sol))))
 
-(displayln "Final output:")
 (displayln sol-str)
