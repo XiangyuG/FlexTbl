@@ -22,6 +22,9 @@ def to_expr(node):
     if t == "equal":
         L = to_expr(node["left"])
         R = to_expr(node["right"])
+        # To deal with the case proto == proto
+        if L == R:
+            return ""
         if L == "proto":
             assert isinstance(R, int)
             if R == 0:
@@ -129,7 +132,7 @@ def to_stmt(node):
             f"if ({cond}) {{\n"
             f"{indent(thn, '    ')}\n"
             f"}} else {{\n"
-            f"{indent(els, '    ')}\n"
+            f"{indent(els, '')}\n"
             f"}}"
         )
     if t == "cons":
@@ -148,11 +151,20 @@ def generate_eval(json_ast):
 
 if __name__ == "__main__":
     import sys, pathlib
-    data = json.load(sys.stdin)
+    if len(sys.argv) < 2:
+        print("Usage: python3 codegen.py <json_file>")
+        sys.exit(1)
+
+    json_file = sys.argv[1]
+
+    with open(json_file, "r") as f:
+        data = json.load(f)
+
     template_filename = "eBPF_template.py"
     template_file = pathlib.Path(template_filename)
     tpl = template_file.read_text(encoding="utf-8")
     eBPF_core_func = generate_eval(data)
+    # print(eBPF_core_func)
     out = tpl.replace("{{MY PROGRAM}}", eBPF_core_func)
 
-    print(eBPF_core_func)
+    print(out)

@@ -1,3 +1,4 @@
+import sys
 # -*- coding: utf-8 -*-
 """
 Parse Racket Rosette output like:
@@ -252,35 +253,17 @@ def parse_impl_fast_to_json(code: str):
 # 5) Demo
 # -------------------------
 if __name__ == "__main__":
-    sample = r'''
-(define (impl-fast srcip dstip proto sport dport)
-  (if (and (equal? (bv #x00000001 32) proto)
-           (and #t #t #t #t #t)
-           (and #t #t #t #t #t)
-           (and #t #t #t #t #t)
-           (equal? (bv #x00000050 32) dport))
-    (if (equal? (bv #x0a000064 32) dstip)
-      (cons
-       (bv #x00000000 32)
-       (packet
-        srcip
-        (bv #xc0a80002 32)
-        (bv #x00000001 32)
-        sport
-        (bv #x00000050 32)))
-      (cons
-       (bv #x00000001 32)
-       (packet srcip dstip (bv #x00000001 32) sport (bv #x00000050 32))))
-    (if (and #t #t #t #t #t)
-      (cons (bv #x00000001 32) (packet srcip dstip proto sport dport))
-      (cons
-       (bv #x00000000 32)
-       (packet
-        (bv #x00000000 32)
-        (bv #x00000000 32)
-        (bv #x00000000 32)
-        (bv #x00000000 32)
-        (bv #x00000000 32))))))
-'''
+    if len(sys.argv) < 2:
+        print("Usage: python3 codegen.py <input_file>")
+        sys.exit(1)
+
+    input_file = sys.argv[1]
+
+    with open(input_file, "r") as f:
+        lines = f.readlines()
+
+    # Skip the first line and join the rest into one string
+    sample = "".join(lines[1:])
+
     ast = parse_impl_fast_to_json(sample)
     print(json.dumps(ast, ensure_ascii=False, indent=2))

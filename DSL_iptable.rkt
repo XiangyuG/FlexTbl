@@ -74,17 +74,17 @@
 
 (define rule1
   (Rule
-   (Match #f (ip->int32 "10.0.0.100") (int32 1) #f (int32 80)) ; match dst ip and dport
+   (Match #f (ip->int32 "10.0.0.100") (int32 1) #f (int32 80)) ; match dst ip, proto, and dport
    (int32 0)
    (Rewrite #f (ip->int32 "192.168.0.2") #f #f))) ; DNAT
 
 (define rule2
   (Rule
-   (Match (ip->int32 "10.0.0.1") #f (int32 1) #f #f) ; match src ip
-   (int32 1)
+   (Match (ip->int32 "10.0.0.1") #f (int32 1) #f #f) ; match src ip and proto
+   (int32 0)
    (Rewrite #f #f #f #f))) ; no NAT
 
-(define rules (list rule1 rule2))
+(define rules (list rule1))
 
 (define pkt (packet (ip->int32 "10.0.0.0") (ip->int32 "10.0.0.101") (int32 1) (int32 12345) (int32 80)))
 
