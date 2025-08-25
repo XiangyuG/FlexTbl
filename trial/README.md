@@ -1,0 +1,1 @@
+This folder is used to try several usage of Rosette.
