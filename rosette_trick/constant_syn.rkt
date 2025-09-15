@@ -85,10 +85,11 @@
 (define sol
   (synthesize
    #:forall (list proto srcIP dstIP srcPort dstPort)
-   #:guarantee (begin
-      (assume (or (equal? proto_sym (int32 0)) (equal? proto_sym (int32 1))))
-      (assert (bveq (spec srcIP dstIP proto srcPort dstPort)
-              (impl srcIP dstIP proto srcPort dstPort))))
+   #:guarantee
+   (begin
+    (assume (or (bveq proto (bv 0 8)) (bveq proto (bv 1 8))))
+    (assert (bveq (spec proto srcIP dstIP srcPort dstPort) (impl proto srcIP dstIP srcPort dstPort)))
+   )
    ))
 
 (if (sat? sol)
