@@ -57,25 +57,27 @@
 
 
 ;;; Example 3: simple synthesis
-(define-symbolic x (bitvector 8))
+(define-symbolic proto (bitvector 8))
+(define-symbolic srcIP (bitvector 32))
+(define-symbolic dstIP (bitvector 32))
+(define-symbolic srcPort (bitvector 16))
+(define-symbolic dstPort (bitvector 16))
 
-;; spec: 只有 x=0 时返回 1
-(define (spec x)
-  (if (bveq x (bv 0 8)) (bv 1 8) (bv 0 8)))
+(define (spec proto)
+  (if (and (bveq proto (bv 0 8)) (bveq proto (bv 0 8))) (bv 1 8) (bv 0 8)))
 
-;; grammar: 候选常量
 (define-grammar (const8)
   [cst (choose (bv 0 8) (bv 1 8) (bv 42 8))])
 
 ;; impl: 待合成
-(define (impl x)
-  (if (bveq x (const8)) (bv 1 8) (bv 0 8)))   ;;; We MUST use bveq for synthesis
+(define (impl proto)
+  (if (bveq proto (const8)) (bv 1 8) (bv 0 8)))   ;;; We MUST use bveq for synthesis
 
 (define sol
   (synthesize
-   #:forall (list x)
+   #:forall (list proto)
    #:guarantee
-   (assert (bveq (spec x) (impl x)))))
+   (assert (bveq (spec proto) (impl proto)))))
 
 (if (sat? sol)
     (print-forms sol)
