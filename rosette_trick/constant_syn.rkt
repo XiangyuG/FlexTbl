@@ -63,21 +63,33 @@
 (define-symbolic srcPort (bitvector 16))
 (define-symbolic dstPort (bitvector 16))
 
-(define (spec proto)
-  (if (and (bveq proto (bv 0 8)) (bveq proto (bv 0 8))) (bv 1 8) (bv 0 8)))
+(define (spec proto srcIP dstIP srcPort dstPort)
+  (if (and (bveq proto (bv 0 8)) (bveq srcIP (bv 0 32)) (bveq dstIP (bv 0 32)) (bveq srcPort (bv 0 16)) (bveq dstPort (bv 0 16))) (bv 1 8) (bv 0 8)))
 
 (define-grammar (const8)
   [cst (choose (bv 0 8) (bv 1 8) (bv 42 8))])
 
+(define-grammar (const32)
+  [cst (choose (bv 0 32) (bv 1 32) (bv 42 32))])
+
+(define-grammar (const16)
+  [cst (choose (bv 0 16) (bv 1 16) (bv 42 16))])
+
 ;; impl: 待合成
-(define (impl proto)
-  (if (bveq proto (const8)) (bv 1 8) (bv 0 8)))   ;;; We MUST use bveq for synthesis
+(define (impl proto srcIP dstIP srcPort dstPort)
+  (if (and (bveq proto (const8)) (bveq srcIP (const32)) (bveq dstIP (const32)) (bveq srcPort (const16)) (bveq dstPort (const16))) (bv 1 8) 
+  ;;; (bv 0 8)
+  (if (and (bveq proto (const8)) (bveq srcIP (const32)) (bveq dstIP (const32)) (bveq srcPort (const16)) (bveq dstPort (const16))) (bv 1 8) (bv 0 8)))   ;;; We MUST use bveq for synthesis
+)
 
 (define sol
   (synthesize
-   #:forall (list proto)
-   #:guarantee
-   (assert (bveq (spec proto) (impl proto)))))
+   #:forall (list proto srcIP dstIP srcPort dstPort)
+   #:guarantee (begin
+      (assume (or (equal? proto_sym (int32 0)) (equal? proto_sym (int32 1))))
+      (assert (bveq (spec srcIP dstIP proto srcPort dstPort)
+              (impl srcIP dstIP proto srcPort dstPort))))
+   ))
 
 (if (sat? sol)
     (print-forms sol)
