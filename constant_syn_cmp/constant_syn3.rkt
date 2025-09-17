@@ -1,0 +1,99 @@
+#lang rosette/safe
+(require rosette/lib/synthax)     ; Require the sketching library.
+
+;;; Example 3: simple synthesis
+(define-symbolic proto (bitvector 8))
+(define-symbolic srcIP (bitvector 32))
+(define-symbolic dstIP (bitvector 32))
+(define-symbolic srcPort (bitvector 16))
+(define-symbolic dstPort (bitvector 16))
+
+(define (spec3 proto srcIP dstIP srcPort dstPort)
+  (if (and (bveq proto (bv 0 8))
+        (bveq srcIP (bv 1 32))
+        (bveq dstIP (bv 42 32))
+        (bveq srcPort (bv 1 16))
+        (bveq dstPort (bv 42 16))) (bv 1 8)
+  (if (and (bveq proto (bv 0 8))
+        (bveq srcIP (bv 1 32))
+        (bveq dstIP (bv 42 32))
+        (bveq srcPort (bv 42 16))
+        (bveq dstPort (bv 42 16))) (bv 1 8)
+  (if (and (bveq proto (bv 0 8))
+        (bveq srcIP (bv 42 32))
+        (bveq dstIP (bv 42 32))
+        (bveq srcPort (bv 1 16))
+        (bveq dstPort (bv 0 16))) (bv 1 8)
+    (bv 0 8)))))
+
+(define-grammar (const8)
+  [cst (choose (bv 0 8) (bv 1 8) (bv 42 8))])
+
+(define-grammar (const32)
+  [cst (choose (bv 0 32) (bv 1 32) (bv 42 32))])
+
+(define-grammar (const16)
+  [cst (choose (bv 0 16) (bv 1 16) (bv 42 16) (bv 80 16) (bv 433 16) (bv 21 16) (bv 135 16) (bv 445 16))])
+
+;; impl:
+(define (impl3 proto srcIP dstIP srcPort dstPort)
+  (if (and (choose (bveq proto (?? (bitvector 8))) #t)
+           (choose (bveq srcIP (?? (bitvector 32))) #t)
+           (choose (bveq dstIP (?? (bitvector 32))) #t)
+           (choose (bveq srcPort (?? (bitvector 16))) #t)
+           (choose (bveq dstPort (?? (bitvector 16))) #t))
+      (bv 1 8)
+  
+  (if (and (choose (bveq proto (?? (bitvector 8))) #t)
+           (choose (bveq srcIP (?? (bitvector 32))) #t)
+           (choose (bveq dstIP (?? (bitvector 32))) #t)
+           (choose (bveq srcPort (?? (bitvector 16))) #t)
+           (choose (bveq dstPort (?? (bitvector 16))) #t))
+      (bv 1 8)
+  
+  (if (and (choose (bveq proto (?? (bitvector 8))) #t)
+           (choose (bveq srcIP (?? (bitvector 32))) #t)
+           (choose (bveq dstIP (?? (bitvector 32))) #t)
+           (choose (bveq srcPort (?? (bitvector 16))) #t)
+           (choose (bveq dstPort (?? (bitvector 16))) #t))
+      (bv 1 8)
+  
+      (bv 0 8)
+)))
+)
+
+(define (impl3vanilla proto srcIP dstIP srcPort dstPort)
+  (if (and (choose (bveq proto (const8)) #t)
+           (choose (bveq srcIP (const32)) #t)
+           (choose (bveq dstIP (const32)) #t)
+           (choose (bveq srcPort (const16)) #t)
+           (choose (bveq dstPort (const16)) #t))
+      (bv 1 8)
+  (if (and (choose (bveq proto (const8)) #t)
+           (choose (bveq srcIP (const32)) #t)
+           (choose (bveq dstIP (const32)) #t)
+           (choose (bveq srcPort (const16)) #t)
+           (choose (bveq dstPort (const16)) #t))
+      (bv 1 8)
+  (if (and (choose (bveq proto (const8)) #t)
+           (choose (bveq srcIP (const32)) #t)
+           (choose (bveq dstIP (const32)) #t)
+           (choose (bveq srcPort (const16)) #t)
+           (choose (bveq dstPort (const16)) #t))
+      (bv 1 8)
+      (bv 0 8))))
+)
+
+
+(define sol
+  (synthesize
+   #:forall (list proto srcIP dstIP srcPort dstPort)
+   #:guarantee
+   (begin
+    (assert (bveq (spec3 proto srcIP dstIP srcPort dstPort) (impl3 proto srcIP dstIP srcPort dstPort)))
+   )
+   ))
+
+(if (sat? sol)
+    (print-forms sol)
+    (displayln "No solution found"))

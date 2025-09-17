@@ -8,7 +8,7 @@
 (define-symbolic srcPort (bitvector 16))
 (define-symbolic dstPort (bitvector 16))
 
-(define (spec proto srcIP dstIP srcPort dstPort)
+(define (spec2 proto srcIP dstIP srcPort dstPort)
   (if (and (bveq proto (bv 0 8))
         (bveq srcIP (bv 0 32))
         (bveq dstIP (bv 1 32))
@@ -20,7 +20,7 @@
         (bveq srcPort (bv 0 16))
         (bveq dstPort (bv 42 16))) (bv 1 8)
     (bv 0 8))))
-    
+
 (define-grammar (const8)
   [cst (choose (bv 0 8) (bv 1 8) (bv 42 8))])
 
