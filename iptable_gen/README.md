@@ -3,7 +3,7 @@
 
 ## Criterion 1: Making the default rule to PKT DROP
 
-## Criterion 2: Block certain ip addresses
+## Criterion 2: Allow certain ip addresses
 
 ## Criterion 3: Allow trafic from certain port ID (e.g., SSH, HTTPS, HTTP)
 
