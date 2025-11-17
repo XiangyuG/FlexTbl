@@ -1,0 +1,6 @@
+srcPort 16-bit
+dstPort 16-bit
+srcIP 32-bit
+dstIP 32-bit
+protocol 8-bit
+ctstate 4-bit
