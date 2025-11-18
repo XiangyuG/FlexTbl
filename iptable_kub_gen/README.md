@@ -29,6 +29,9 @@ It includes:
 ### **3. `gen_impl.py`**
 This file provides functions to **generate implementation (nested If-then-else statement) for eBPF**.
 
+### **4. All python files in the parser folder**
+This file provides functions to **parse the output of synthesizer and generate eBPF programs**.
+
 
 ## 🧪 Usage
 
@@ -39,4 +42,8 @@ racket <filename>.rkt
 ```
 ```bash
 python3 gen_impl.py <depth>
+```
+```bash
+cd parser
+python3 parse_impl.py impl.rkt 
 ```
