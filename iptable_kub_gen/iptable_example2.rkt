@@ -151,6 +151,10 @@
             [mask0 (?? (bitvector 32))]
             [mask0L (?? (bitvector 32))]
             [mask0R (?? (bitvector 32))]
+            [mask0LL (?? (bitvector 32))]
+            [mask0LR (?? (bitvector 32))]
+            [mask0RL (?? (bitvector 32))]
+            [mask0RR (?? (bitvector 32))]
 
             ;; node 0 condition：
             [Const0    (choose (bv 0 4) (bv 1 4) (bv 2 4) (bv 3 4) (bv 5 4) (bv 4278190080 32) (bv 2130706432 32))]
@@ -181,18 +185,62 @@
                    (choose srcPort dstPort protocol ctstate)
                    Const0L))]
     
-    [choice0LL (choose 0 1 2 3)]
-    [expr0LL (cond
-        [(= choice0LL 0) (bv 0 4)]
-        [(= choice0LL 1) (bv 1 4)]
+
+            ;; node 0LL condition：
+            [Const0LL    (choose (bv 0 4) (bv 1 4) (bv 2 4) (bv 3 4) (bv 5 4) (bv 4278190080 32) (bv 2130706432 32))]
+
+            [cond0LL
+              (choose
+                ;; IP branch (bvand (choose srcIP dstIP) mask) ?= ipConst
+                ((choose bveq)
+                   (bvand (choose srcIP dstIP) mask0LL)
+                   Const0LL)
+                ;; non IP branch
+                ((choose bveq)
+                   (choose srcPort dstPort protocol ctstate)
+                   Const0LL))]
+    
+    [choice0LLL (choose 0 1 2 3)]
+    [expr0LLL (cond
+        [(= choice0LLL 0) (bv 0 4)]
+        [(= choice0LLL 1) (bv 1 4)]
         [else (bv 0 4)] ; default accept
             )]
-    [choice0LR (choose 0 1 2 3)]
-    [expr0LR (cond
-        [(= choice0LR 0) (bv 0 4)]
-        [(= choice0LR 1) (bv 1 4)]
+    [choice0LLR (choose 0 1 2 3)]
+    [expr0LLR (cond
+        [(= choice0LLR 0) (bv 0 4)]
+        [(= choice0LLR 1) (bv 1 4)]
         [else (bv 0 4)] ; default accept
             )]
+    [expr0LL (if cond0LL expr0LLL expr0LLR)]
+
+            ;; node 0LR condition：
+            [Const0LR    (choose (bv 0 4) (bv 1 4) (bv 2 4) (bv 3 4) (bv 5 4) (bv 4278190080 32) (bv 2130706432 32))]
+
+            [cond0LR
+              (choose
+                ;; IP branch (bvand (choose srcIP dstIP) mask) ?= ipConst
+                ((choose bveq)
+                   (bvand (choose srcIP dstIP) mask0LR)
+                   Const0LR)
+                ;; non IP branch
+                ((choose bveq)
+                   (choose srcPort dstPort protocol ctstate)
+                   Const0LR))]
+    
+    [choice0LRL (choose 0 1 2 3)]
+    [expr0LRL (cond
+        [(= choice0LRL 0) (bv 0 4)]
+        [(= choice0LRL 1) (bv 1 4)]
+        [else (bv 0 4)] ; default accept
+            )]
+    [choice0LRR (choose 0 1 2 3)]
+    [expr0LRR (cond
+        [(= choice0LRR 0) (bv 0 4)]
+        [(= choice0LRR 1) (bv 1 4)]
+        [else (bv 0 4)] ; default accept
+            )]
+    [expr0LR (if cond0LR expr0LRL expr0LRR)]
     [expr0L (if cond0L expr0LL expr0LR)]
 
             ;; node 0R condition：
@@ -209,22 +257,67 @@
                    (choose srcPort dstPort protocol ctstate)
                    Const0R))]
     
-    [choice0RL (choose 0 1 2 3)]
-    [expr0RL (cond
-        [(= choice0RL 0) (bv 0 4)]
-        [(= choice0RL 1) (bv 1 4)]
+
+            ;; node 0RL condition：
+            [Const0RL    (choose (bv 0 4) (bv 1 4) (bv 2 4) (bv 3 4) (bv 5 4) (bv 4278190080 32) (bv 2130706432 32))]
+
+            [cond0RL
+              (choose
+                ;; IP branch (bvand (choose srcIP dstIP) mask) ?= ipConst
+                ((choose bveq)
+                   (bvand (choose srcIP dstIP) mask0RL)
+                   Const0RL)
+                ;; non IP branch
+                ((choose bveq)
+                   (choose srcPort dstPort protocol ctstate)
+                   Const0RL))]
+    
+    [choice0RLL (choose 0 1 2 3)]
+    [expr0RLL (cond
+        [(= choice0RLL 0) (bv 0 4)]
+        [(= choice0RLL 1) (bv 1 4)]
         [else (bv 0 4)] ; default accept
             )]
-    [choice0RR (choose 0 1 2 3)]
-    [expr0RR (cond
-        [(= choice0RR 0) (bv 0 4)]
-        [(= choice0RR 1) (bv 1 4)]
+    [choice0RLR (choose 0 1 2 3)]
+    [expr0RLR (cond
+        [(= choice0RLR 0) (bv 0 4)]
+        [(= choice0RLR 1) (bv 1 4)]
         [else (bv 0 4)] ; default accept
             )]
+    [expr0RL (if cond0RL expr0RLL expr0RLR)]
+
+            ;; node 0RR condition：
+            [Const0RR    (choose (bv 0 4) (bv 1 4) (bv 2 4) (bv 3 4) (bv 5 4) (bv 4278190080 32) (bv 2130706432 32))]
+
+            [cond0RR
+              (choose
+                ;; IP branch (bvand (choose srcIP dstIP) mask) ?= ipConst
+                ((choose bveq)
+                   (bvand (choose srcIP dstIP) mask0RR)
+                   Const0RR)
+                ;; non IP branch
+                ((choose bveq)
+                   (choose srcPort dstPort protocol ctstate)
+                   Const0RR))]
+    
+    [choice0RRL (choose 0 1 2 3)]
+    [expr0RRL (cond
+        [(= choice0RRL 0) (bv 0 4)]
+        [(= choice0RRL 1) (bv 1 4)]
+        [else (bv 0 4)] ; default accept
+            )]
+    [choice0RRR (choose 0 1 2 3)]
+    [expr0RRR (cond
+        [(= choice0RRR 0) (bv 0 4)]
+        [(= choice0RRR 1) (bv 1 4)]
+        [else (bv 0 4)] ; default accept
+            )]
+    [expr0RR (if cond0RR expr0RRL expr0RRR)]
     [expr0R (if cond0R expr0RL expr0RR)]
     [expr0 (if cond0 expr0L expr0R)]
         )
     expr0))
+
 
 (define sol
    (synthesize
