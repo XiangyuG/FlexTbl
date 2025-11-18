@@ -116,22 +116,25 @@ def collect_nodes(prefix, depth):
 
 def gen_symbolic_masks(depth):
     nodes = []
+    mask_names = []
     for i in range(depth):
         nodes += collect_nodes("0", i)
     if len(nodes) != 0:
-        names = [f"mask{n}" for n in nodes]  # mask0, mask0L, mask0R, ...
-        name_list = " ".join(names)
-        return f"(define-symbolic {name_list} (bitvector 32))"
-    return ""
+        mask_names = [f"mask{n}" for n in nodes]  # mask0, mask0L, mask0R, ...
+    return mask_names
 
 
 def gen_impl(depth):
     bindings, root_expr = gen_node("0", depth)
-    header = gen_symbolic_masks(depth)
-    header += """
+    mask_l = gen_symbolic_masks(depth)
+    header = """
 (define (impl srcPort srcIP dstPort dstIP protocol ctstate)
   (let* (
 """
+    for m in mask_l:
+        # [mask0 (?? (bitvector 32))]
+        mask_def_str = f"[{m} (?? (bitvector 32))]"
+        header += indent(mask_def_str, 12) + "\n"
     footer = f"""
         )
     {root_expr}))
