@@ -19,16 +19,24 @@ def eval_expr(expr, env):
     expr: 由 sexp_to_python 得到的 Python 结构
     env:  字典，比如 {"choice0LL": 3, "Const0": {...}}
     """
-    # 整数：直接返回
+    # integer, return directly
     if isinstance(expr, int):
         return expr
 
-    # 字符串：变量名或符号
     if isinstance(expr, str):
-        # 如果是环境里已有的变量，就取它的值
+        # 1) hexidecimal
+        if expr.startswith("#x") or expr.startswith("#X"):
+            return int(expr[2:], 16)
+
+        # 2) binary
+        if expr.startswith("#b") or expr.startswith("#B"):
+            return int(expr[2:], 2)
+
+        # 3) already binded variables
         if expr in env:
             return env[expr]
-        # 否则，当成“符号”/自由变量
+
+        # 4) other variables
         return {"var": expr}
 
     # 列表：S-expression
@@ -48,10 +56,11 @@ def eval_expr(expr, env):
         if head == "=":
             left = eval_expr(expr[1], env)
             right = eval_expr(expr[2], env)
-            # 两边都是整数：可以比较
+            # compare 2 integers
             if isinstance(left, int) and isinstance(right, int):
                 return left == right
             # 其他情况先不计算，保留结构
+            # TODO: may need to update
             return {"eq": (left, right)}
 
         # (cond [test expr] ... [else expr])
