@@ -1,5 +1,6 @@
 import sexpdata
 import sys
+from eBPFgen import eBPFcodegen
 # ---------- Part 1: sexpdata -> 纯 Python 结构 ----------
 
 def sexp_to_python(node):
@@ -97,9 +98,24 @@ def eval_expr(expr, env):
 
 # ---------- Part 3: 解析 impl.rkt, 按 let* 顺序求每个变量的值 ----------
 
-def main(filename):
+def load_racket_expr(filename):
+    lines = []
     with open(filename) as f:
-        code = f.read()
+        for line in f:
+            # Fine the real beginning
+            if line.strip().startswith("(define"):
+                lines.append(line)
+                break  # continue collecting other lines
+        # collecting other lines of code
+        for line in f:
+            lines.append(line)
+
+    code = "".join(lines)
+    return code
+
+
+def main(filename):
+    code = load_racket_expr(filename)
 
     ast = sexpdata.loads(code)
     py = sexp_to_python(ast)
@@ -122,11 +138,16 @@ def main(filename):
     for name, expr in bindings:
         val = eval_expr(expr, env)
         env[name] = val
-        print(f"{name} = {val}")
-
+        # print(f"{name} = {val}")
+    print("=== Evaluate let* bindings in order DONE===")
+    
     print("\n=== Evaluate body expr0 ===")
     result = eval_expr(body_expr, env)
+    # print(f"expr0 = {result}")
+    print("\n=== Evaluate body expr0 DONE===")
     print(f"expr0 = {result}")
+    eBPFcodegen(expr=result, name="iptable_impl")
+    print("successful parse the result.")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -134,3 +155,15 @@ if __name__ == "__main__":
         sys.exit(0)
     filename = str(sys.argv[1])
     main(filename)
+
+# expr0 = 
+# {'if': 
+#  {'cond': [[{'var': 'choose'}, {'var': 'bveq'}], [{'var': 'bvand'}, {'var': 'srcIP'}, {'var': 'mask0'}], {'type': 'bv', 'value': 2130706432, 'width': 32}], 
+#   'then': {'if': {'cond': [[{'var': 'choose'}, {'var': 'bveq'}], [{'var': 'bvand'}, {'var': 'srcIP'}, {'var': 'mask0L'}], {'type': 'bv', 'value': 2130706432, 'width': 32}], 
+#                   'then': {'type': 'bv', 'value': 0, 'width': 4}, 'else': {'type': 'bv', 'value': 1, 'width': 4}}
+#           }, 
+#  'else': {'if': {'cond': [[{'var': 'choose'}, {'var': 'bveq'}], [{'var': 'bvand'}, {'var': 'dstIP'}, {'var': 'mask0R'}], {'type': 'bv', 'value': 2130706432, 'width': 32}], 
+#                  'then': {'type': 'bv', 'value': 1, 'width': 4}, 'else': {'type': 'bv', 'value': 0, 'width': 4}
+#                 }
+#         }
+# }}
