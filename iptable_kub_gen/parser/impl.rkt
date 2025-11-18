@@ -1,5 +1,9 @@
+/users/xiang95/FlexTbl/iptable_kub_gen/iptable_example1.rkt:149:0
 (define (impl srcPort srcIP dstPort dstIP protocol ctstate)
-  (let* ((Const0 (bv 2130706432 32))
+  (let* ((mask0 (bv #xff000000 32))
+         (mask0L (bv #xff000000 32))
+         (mask0R (bv #xff000000 32))
+         (Const0 (bv 2130706432 32))
          (cond0 ((choose bveq) (bvand srcIP mask0) Const0))
          (Const0L (bv 2130706432 32))
          (cond0L ((choose bveq) (bvand srcIP mask0L) Const0L))
