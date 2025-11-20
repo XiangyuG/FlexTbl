@@ -77,9 +77,10 @@ def gen_node(node_id, depth):
         )
         # expr = 根据 choiceN 选 DECISIONS
         cases = []
+        # (list (bv 5 4) srcPort srcIP dstPort dstIP protocol ctstate mark rand)
         for i, d in enumerate(DECISIONS):
-            cases.append(f"[(= {choice_name} {i}) {d}]")
-        cond_body = "\n".join(cases + ["[else (bv 0 4)] ; default accept"])
+            cases.append(f"[(= {choice_name} {i}) (list {d} {chain_parameters})]")
+        cond_body = "\n".join(cases)
         bindings.append(
             f"[{expr_name} (cond\n{indent(cond_body, 4)}\n        )]"
         )
