@@ -1,18 +1,28 @@
 #!/usr/bin/env python3
 import sys
 
-
-VAR_NAMES = ["srcPort", "srcIP", "dstPort", "dstIP", "protocol", "ctstate"]
+VAR_NAMES = ["srcPort", "srcIP", "dstPort", "dstIP", "protocol", "ctstate", "mark", "rand"]
 
 # All filtering decisions (0 --> accept, 1 --> drop)
 DECISIONS = ["(bv 0 4)", "(bv 1 4)"]
 
 # constant to compare with
-CMP_CONSTS = ["(bv 0 4)", "(bv 1 4)", "(bv 2 4)", "(bv 3 4)", "(bv 5 4)", "(bv 4278190080 32)", "(bv 2130706432 32)"]
+# TODO: get this constant list from input
+CMP_CONSTS = ["(bv 0 4)", "(bv 1 4)", "(bv 2 4)", "(bv 3 4)", "(bv 4 4)", "(bv 5 4)", 
+              "(bv 6 4)", "(bv 7 4)", "(bv 8 4)", "(bv 9 4)", "(bv 10 4)", 
+              "(bv 11 4)", "(bv 12 4)", "(bv 13 4)", "(bv 14 4)", "(bv 15 4)", "(bv 4278190080 32)", "(bv 2130706432 32)"]
 
 # comparison operators
 CMP_OPS = ["bveq"]
 
+chain_parameters = " ".join(VAR_NAMES)
+no_mask_parameters = ""
+for v in VAR_NAMES:
+    if v != "srcIP" and v != "dstIP":
+        if no_mask_parameters == "":
+            no_mask_parameters += v
+        else: 
+            no_mask_parameters += " " + v
 
 def gen_cond_name(node_id):
     return f"cond{node_id}"
@@ -35,7 +45,7 @@ def gen_cond_block(cond_name, node_id):
     normal_const = f"Const{node_id}"
 
     return f"""
-        ;; node {node_id} condition：
+        ;; node {node_id} condition:
         [{normal_const}    (choose {' '.join(CMP_CONSTS)})]
 
         [{cond_name}
@@ -46,7 +56,7 @@ def gen_cond_block(cond_name, node_id):
                {normal_const})
             ;; non IP branch
             ((choose {' '.join(CMP_OPS)})
-               (choose srcPort dstPort protocol ctstate)
+               (choose {no_mask_parameters})
                {normal_const}))]
     """
 
@@ -127,8 +137,8 @@ def gen_symbolic_masks(depth):
 def gen_impl(depth):
     bindings, root_expr = gen_node("0", depth)
     mask_l = gen_symbolic_masks(depth)
-    header = """
-(define (impl srcPort srcIP dstPort dstIP protocol ctstate)
+    header = f"""
+(define (impl {chain_parameters})
   (let* (
 """
     for m in mask_l:
