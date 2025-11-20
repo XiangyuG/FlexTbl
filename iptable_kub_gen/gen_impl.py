@@ -61,6 +61,21 @@ def gen_cond_block(cond_name, node_id):
                {normal_const}))]
     """
 
+
+def gen_set_str(node_id, bindings):
+    set_str = ""
+    for v in VAR_NAMES:
+        if v != "rand" and v != "protocol":
+            const_val_name1 = f"Const{node_id}_{v}_1"
+            const_val_name2 = f"Const{node_id}_{v}_2"
+            bindings.append(f"[{const_val_name1}    (choose {' '.join(CMP_CONSTS)})]")
+            bindings.append(f"[{const_val_name2}    (choose {' '.join(CMP_CONSTS)})]")
+            curr_set_str = f"(set! {v} ((choose bvand bvor) (choose {v} {const_val_name1}) {const_val_name2}))"
+            set_str += curr_set_str + "\n"
+        else:
+            continue
+    return set_str, bindings
+
 def gen_node(node_id, depth):
     """
     递归生成一个节点的 let* bindings 代码片段和该节点最终表达式名字。
@@ -75,11 +90,13 @@ def gen_node(node_id, depth):
         bindings.append(
             f"[{choice_name} (choose 0 1 2 3)]"
         )
+        # Generate a series of set statements (e.g., (set! {v} (op op1 op2)))
+        set_str, bindings = gen_set_str(node_id, bindings)
         # expr = 根据 choiceN 选 DECISIONS
         cases = []
         # (list (bv 5 4) srcPort srcIP dstPort dstIP protocol ctstate mark rand)
         for i, d in enumerate(DECISIONS):
-            cases.append(f"[(= {choice_name} {i}) (list {d} {chain_parameters})]")
+            cases.append(f"[(= {choice_name} {i}) \n {set_str} (list {d} {chain_parameters})]")
         cond_body = "\n".join(cases)
         bindings.append(
             f"[{expr_name} (cond\n{indent(cond_body, 4)}\n        )]"
@@ -111,9 +128,11 @@ def gen_node(node_id, depth):
     bindings.append(left_bindings)
     bindings.append(right_bindings)
 
+    # Generate a series of set statements (e.g., (set! {v} (op op1 op2)))
+    set_str, bindings = gen_set_str(node_id, bindings)
     cases = []
     for i, d in enumerate(DECISIONS):
-        cases.append(f"[(= {choice_name} {i}) (list {d} {chain_parameters})]")
+        cases.append(f"[(= {choice_name} {i}) \n {set_str} (list {d} {chain_parameters})]")
     cond_body = "\n".join(cases)
     # 当前节点表达式：if cond then left_expr else right_expr
     bindings.append(
