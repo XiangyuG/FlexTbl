@@ -86,7 +86,7 @@ def gen_node(node_id, depth):
         )
         return "\n".join(bindings), expr_name
 
-    # depth > 0：内部节点
+    # depth > 0：internal node
     bindings = []
 
     # 条件 condX: (op var const)
@@ -104,12 +104,26 @@ def gen_node(node_id, depth):
     left_bindings, left_expr = gen_node(f"{node_id}L", depth - 1)
     right_bindings, right_expr = gen_node(f"{node_id}R", depth - 1)
 
+    choice_name = f"choice{node_id}"
+    bindings.append(
+        f"[{choice_name} (choose 0 1 2 3)]"
+    )
     bindings.append(left_bindings)
     bindings.append(right_bindings)
 
+    cases = []
+    for i, d in enumerate(DECISIONS):
+        cases.append(f"[(= {choice_name} {i}) (list {d} {chain_parameters})]")
+    cond_body = "\n".join(cases)
     # 当前节点表达式：if cond then left_expr else right_expr
     bindings.append(
-        f"[{expr_name} (if {cond_name} {left_expr} {right_expr})]"
+        f"[{expr_name} (cond\n{indent(cond_body, 4)}"
+    )
+    bindings.append(
+        f"    [else (if {cond_name} {left_expr} {right_expr})]"
+    )
+    bindings.append(
+        f")]"
     )
 
     return "\n".join(bindings), expr_name
