@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import json
 
 VAR_NAMES = ["srcPort", "srcIP", "dstPort", "dstIP", "protocol", "ctstate", "mark", "rand"]
 
@@ -10,7 +11,7 @@ DECISIONS = ["(bv 0 4)", "(bv 1 4)"]
 # TODO: get this constant list from input
 CMP_CONSTS = ["(bv 0 4)", "(bv 1 4)", "(bv 2 4)", "(bv 3 4)", "(bv 4 4)", "(bv 5 4)", 
               "(bv 6 4)", "(bv 7 4)", "(bv 8 4)", "(bv 9 4)", "(bv 10 4)", 
-              "(bv 11 4)", "(bv 12 4)", "(bv 13 4)", "(bv 14 4)", "(bv 15 4)", "(bv 4278190080 32)", "(bv 2130706432 32)"]
+              "(bv 11 4)", "(bv 12 4)", "(bv 13 4)", "(bv 14 4)", "(bv 15 4)"]
 
 # comparison operators
 CMP_OPS = ["bveq"]
@@ -134,7 +135,11 @@ def gen_symbolic_masks(depth):
     return mask_names
 
 
-def gen_impl(depth):
+def gen_impl(depth, constant_list):
+    global CMP_CONSTS
+    for v in constant_list:
+        CMP_CONSTS.append(v)
+
     bindings, root_expr = gen_node("0", depth)
     mask_l = gen_symbolic_masks(depth)
     header = f"""
@@ -155,9 +160,13 @@ def gen_impl(depth):
 
 if __name__ == "__main__":
 
-    if len(sys.argv) != 2:
-        print("Usage: python gen_impl.py <depth>")
+    if len(sys.argv) != 3:
+        print("Usage: python gen_impl.py <depth> <constant filename>")
         sys.exit(0)
     depth = int(sys.argv[1])
-    code = gen_impl(depth)
+    constant_filename = str(sys.argv[2])
+    with open(constant_filename) as f:
+        constant_list = json.load(f)
+
+    code = gen_impl(depth, constant_list)
     print(code)
