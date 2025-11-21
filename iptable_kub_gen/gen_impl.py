@@ -5,7 +5,7 @@ import json
 VAR_NAMES = ["srcPort", "srcIP", "dstPort", "dstIP", "protocol", "ctstate", "mark", "rand"]
 
 # All filtering decisions (0 --> accept, 1 --> drop)
-DECISIONS = ["(bv 0 4)", "(bv 1 4)"]
+DECISIONS = ["(bv 0 4)", "(bv 1 4)", "(bv 5 4)", "(bv 8 4)"]
 
 # constant to compare with
 # TODO: get this constant list from input
@@ -70,7 +70,8 @@ def gen_set_str(node_id, bindings):
             const_val_name2 = f"Const{node_id}_{v}_2"
             bindings.append(f"[{const_val_name1}    (choose {' '.join(CMP_CONSTS)})]")
             bindings.append(f"[{const_val_name2}    (choose {' '.join(CMP_CONSTS)})]")
-            curr_set_str = f"(set! {v} ((choose bvand bvor) (choose {v} {const_val_name1}) {const_val_name2}))"
+            # (set! srcPort (choose srcPort ((choose bvand bvor) (choose srcPort Const0_srcPort_1) Const0_srcPort_2)))
+            curr_set_str = f"(set! {v} (choose {v} ((choose bvand bvor) (choose {v} {const_val_name1}) {const_val_name2})))"
             set_str += curr_set_str + "\n"
         else:
             continue
@@ -92,7 +93,6 @@ def gen_node(node_id, depth):
         )
         # Generate a series of set statements (e.g., (set! {v} (op op1 op2)))
         set_str, bindings = gen_set_str(node_id, bindings)
-        # expr = 根据 choiceN 选 DECISIONS
         cases = []
         # (list (bv 5 4) srcPort srcIP dstPort dstIP protocol ctstate mark rand)
         for i, d in enumerate(DECISIONS):
