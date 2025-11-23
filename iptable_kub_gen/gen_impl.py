@@ -5,7 +5,7 @@ import json
 VAR_NAMES = ["srcPort", "srcIP", "dstPort", "dstIP", "protocol", "ctstate", "mark", "rand"]
 
 # All filtering decisions (0 --> accept, 1 --> drop)
-DECISIONS = ["(bv 0 4)", "(bv 1 4)", "(bv 5 4)", "(bv 8 4)"]
+DECISIONS = ["(?? (bitvector 4))"]
 
 # constant to compare with
 # TODO: get this constant list from input
@@ -15,6 +15,8 @@ CMP_CONSTS = ["(bv 0 4)", "(bv 1 4)", "(bv 2 4)", "(bv 3 4)", "(bv 4 4)", "(bv 5
 
 # comparison operators
 CMP_OPS = ["bveq"]
+
+OPERATORS = ["bvand", "bvor"]
 
 chain_parameters = " ".join(VAR_NAMES)
 no_mask_parameters = ""
@@ -46,16 +48,13 @@ def gen_cond_block(cond_name, node_id):
     normal_const = f"Const{node_id}"
 
     return f"""
-        ;; node {node_id} condition:
         [{normal_const}    (choose {' '.join(CMP_CONSTS)})]
 
         [{cond_name}
           (choose
-            ;; IP branch (bvand (choose srcIP dstIP) mask) ?= ipConst
             ((choose {' '.join(CMP_OPS)})
                (bvand (choose srcIP dstIP) {mask_name})
                {normal_const})
-            ;; non IP branch
             ((choose {' '.join(CMP_OPS)})
                (choose {no_mask_parameters})
                {normal_const}))]
@@ -70,8 +69,7 @@ def gen_set_str(node_id, bindings):
             const_val_name2 = f"Const{node_id}_{v}_2"
             bindings.append(f"[{const_val_name1}    (choose {' '.join(CMP_CONSTS)})]")
             bindings.append(f"[{const_val_name2}    (choose {' '.join(CMP_CONSTS)})]")
-            # (set! srcPort (choose srcPort ((choose bvand bvor) (choose srcPort Const0_srcPort_1) Const0_srcPort_2)))
-            curr_set_str = f"(set! {v} (choose {v} ((choose bvand bvor) (choose {v} {const_val_name1}) {const_val_name2})))"
+            curr_set_str = f"(set! {v} (choose {v} ((choose {' '.join(OPERATORS)}) (choose {v} {const_val_name1}) {const_val_name2})))"
             set_str += curr_set_str + "\n"
         else:
             continue
@@ -123,7 +121,7 @@ def gen_node(node_id, depth):
 
     choice_name = f"choice{node_id}"
     bindings.append(
-        f"[{choice_name} (choose 0 1 2 3)]"
+        f"[{choice_name} (choose 0 1 2 3 4)]"
     )
     bindings.append(left_bindings)
     bindings.append(right_bindings)
