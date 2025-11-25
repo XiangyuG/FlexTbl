@@ -7,11 +7,8 @@ VAR_NAMES = ["srcPort", "srcIP", "dstPort", "dstIP", "protocol", "ctstate", "mar
 # All filtering decisions (0 --> accept, 1 --> drop)
 DECISIONS = ["(?? (bitvector 4))"]
 
-# constant to compare with
-# TODO: get this constant list from input
-CMP_CONSTS = ["(bv 0 4)", "(bv 1 4)", "(bv 2 4)", "(bv 3 4)", "(bv 4 4)", "(bv 5 4)", 
-              "(bv 6 4)", "(bv 7 4)", "(bv 8 4)", "(bv 9 4)", "(bv 10 4)", 
-              "(bv 11 4)", "(bv 12 4)", "(bv 13 4)", "(bv 14 4)", "(bv 15 4)"]
+# default constant to compare with
+CMP_CONSTS = ["(bv 0 4)", "(bv 1 4)", "(bv 2 4)", "(bv 3 4)", "(bv 4 4)", "(bv 5 4)"]
 
 # comparison operators
 CMP_OPS = ["bveq"]
@@ -63,16 +60,39 @@ def gen_cond_block(cond_name, node_id):
 
 def gen_set_str(node_id, bindings):
     set_str = ""
+    let_bindings = []  # list of "[var binding]" strings
+
     for v in VAR_NAMES:
         if v != "rand" and v != "protocol":
             const_val_name1 = f"Const{node_id}_{v}_1"
             const_val_name2 = f"Const{node_id}_{v}_2"
             bindings.append(f"[{const_val_name1}    (choose {' '.join(CMP_CONSTS)})]")
             bindings.append(f"[{const_val_name2}    (choose {' '.join(CMP_CONSTS)})]")
-            curr_set_str = f"(set! {v} (choose {v} ((choose {' '.join(OPERATORS)}) (choose {v} {const_val_name1}) {const_val_name2})))"
-            set_str += curr_set_str + "\n"
+
+            # 生成内部变量名字：srcPort3 / srcIP3 / ...
+            new_v = f"{v}{node_id}"
+
+            # let* 里面的绑定
+            binding_expr = (
+                f"[{new_v} "
+                f"(choose {v} "
+                f"((choose {' '.join(OPERATORS)}) "
+                f"(choose {v} {const_val_name1}) {const_val_name2}))]"
+            )
+            let_bindings.append(binding_expr)
+
+            # curr_set_str = f"(let ([{v}{node_id} (choose {v} ((choose {' '.join(OPERATORS)}) (choose {v} {const_val_name1}) {const_val_name2})))])"
+            # # curr_set_str = f"(set! {v} (choose {v} ((choose {' '.join(OPERATORS)}) (choose {v} {const_val_name1}) {const_val_name2})))"
+            # set_str += curr_set_str + "\n"
         else:
             continue
+    binds = "\n        ".join(let_bindings)
+    set_str = (
+        f"(let* (\n"
+        f"        {binds}\n"
+        f"       )\n"
+    )
+
     return set_str, bindings
 
 def gen_node(node_id, depth):
@@ -93,8 +113,14 @@ def gen_node(node_id, depth):
         set_str, bindings = gen_set_str(node_id, bindings)
         cases = []
         # (list (bv 5 4) srcPort srcIP dstPort dstIP protocol ctstate mark rand)
+        return_parameters = ""
+        for v in VAR_NAMES:
+            if v != "rand" and v != "protocol":
+                return_parameters += f" {v}{node_id}"
+            else:
+                return_parameters += f" {v}"
         for i, d in enumerate(DECISIONS):
-            cases.append(f"[(= {choice_name} {i}) \n {set_str} (list {d} {chain_parameters})]")
+            cases.append(f"[(= {choice_name} {i}) \n {set_str} (list {d} {return_parameters}))]")
         cond_body = "\n".join(cases)
         bindings.append(
             f"[{expr_name} (cond\n{indent(cond_body, 4)}\n        )]"
@@ -119,22 +145,32 @@ def gen_node(node_id, depth):
     left_bindings, left_expr = gen_node(f"{node_id}L", depth - 1)
     right_bindings, right_expr = gen_node(f"{node_id}R", depth - 1)
 
-    choice_name = f"choice{node_id}"
-    bindings.append(
-        f"[{choice_name} (choose 0 1 2 3 4)]"
-    )
+    # choice_name = f"choice{node_id}"
+    # bindings.append(
+    #     f"[{choice_name} (choose 0 1 2 3 4)]"
+    # )
     bindings.append(left_bindings)
     bindings.append(right_bindings)
 
     # Generate a series of set statements (e.g., (set! {v} (op op1 op2)))
-    set_str, bindings = gen_set_str(node_id, bindings)
-    cases = []
-    for i, d in enumerate(DECISIONS):
-        cases.append(f"[(= {choice_name} {i}) \n {set_str} (list {d} {chain_parameters})]")
-    cond_body = "\n".join(cases)
+    # set_str, bindings = gen_set_str(node_id, bindings)
+    # cases = []
+    # return_parameters = ""
+    # for v in VAR_NAMES:
+    #     if v != "rand" and v != "protocol":
+    #         return_parameters += f" {v}{node_id}"
+    #     else:
+    #         return_parameters += f" {v}"
+    # for i, d in enumerate(DECISIONS):
+    #     cases.append(f"[(= {choice_name} {i}) \n {set_str} (list {d} {return_parameters}))]")
+    # cond_body = "\n".join(cases)
     # 当前节点表达式：if cond then left_expr else right_expr
+    # bindings.append(
+    #     f"[{expr_name} (cond\n{indent(cond_body, 4)}"
+    # )
+
     bindings.append(
-        f"[{expr_name} (cond\n{indent(cond_body, 4)}"
+        f"[{expr_name} (cond\n"
     )
     bindings.append(
         f"    [else (if {cond_name} {left_expr} {right_expr})]"
@@ -180,7 +216,8 @@ def gen_impl(depth, constant_list):
 """
     for m in mask_l:
         # [mask0 (?? (bitvector 32))]
-        mask_def_str = f"[{m} (?? (bitvector 32))]"
+        # mask_def_str = f"[{m} (?? (bitvector 32))]"
+        mask_def_str = f"[{m} (choose {' '.join(CMP_CONSTS)})]"
         header += indent(mask_def_str, 12) + "\n"
     footer = f"""
         )
