@@ -5,7 +5,7 @@ import json
 VAR_NAMES = ["srcPort", "srcIP", "dstPort", "dstIP", "protocol", "ctstate", "mark", "rand"]
 
 # All filtering decisions (0 --> accept, 1 --> drop)
-DECISIONS = ["(?? (bitvector 4))"]
+DECISIONS = ["(bv 0 4)", "(bv 1 4)", "(bv 2 4)", "(bv 3 4)", "(bv 4 4)", "(bv 5 4)", "(bv 6 4)", "(bv 7 4)"]
 
 # default constant to compare with
 CMP_CONSTS = ["(bv 0 4)", "(bv 1 4)", "(bv 2 4)", "(bv 3 4)", "(bv 4 4)", "(bv 5 4)"]
@@ -105,10 +105,10 @@ def gen_node(node_id, depth):
     # depth 0：leaf node, choose a decision
     if depth == 0:
         bindings = []
-        choice_name = f"choice{node_id}"
-        bindings.append(
-            f"[{choice_name} (choose 0 1 2 3)]"
-        )
+        # choice_name = f"choice{node_id}"
+        # bindings.append(
+        #     f"[{choice_name} (choose 0 1 2 3)]"
+        # )
         # Generate a series of set statements (e.g., (set! {v} (op op1 op2)))
         set_str, bindings = gen_set_str(node_id, bindings)
         cases = []
@@ -119,8 +119,15 @@ def gen_node(node_id, depth):
                 return_parameters += f" {v}{node_id}"
             else:
                 return_parameters += f" {v}"
-        for i, d in enumerate(DECISIONS):
-            cases.append(f"[(= {choice_name} {i}) \n {set_str} (list {d} {return_parameters}))]")
+        # for i, d in enumerate(DECISIONS):
+        #     cases.append(f"[(= {choice_name} {i}) \n {set_str} (list {d} {return_parameters}))]")
+        # cond_body = "\n".join(cases)
+        ret_var_name = f"ret{node_id}"
+        bindings.append(
+            f"[{ret_var_name} (choose {' '.join(DECISIONS)})]"
+        )
+
+        cases.append(f"[else \n {set_str} (list {ret_var_name} {return_parameters}))]")
         cond_body = "\n".join(cases)
         bindings.append(
             f"[{expr_name} (cond\n{indent(cond_body, 4)}\n        )]"
