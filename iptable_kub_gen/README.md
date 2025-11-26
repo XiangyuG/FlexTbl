@@ -32,6 +32,8 @@ This file provides functions to **generate implementation (nested If-then-else s
 ### **4. All python files in the parser folder**
 This file provides functions to **parse the output of synthesizer and generate eBPF programs**.
 
+### **5. `debug.rkt`**
+This racket file contains several debugging trails.
 
 ## 🧪 Usage
 
