@@ -41,7 +41,7 @@ Run any `.rkt` file with:
 racket <filename>.rkt
 ```
 ```bash
-python3 gen_impl.py <depth>
+python3 gen_impl.py <depth> <jsonfilename (e.g., constant.json)>
 ```
 ```bash
 cd parser
