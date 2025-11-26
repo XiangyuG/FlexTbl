@@ -4,6 +4,8 @@ import json
 
 VAR_NAMES = ["srcPort", "srcIP", "dstPort", "dstIP", "protocol", "ctstate", "mark", "rand"]
 
+# TODO: get fields that are not modified from input specification
+VAR_NAMES_NO_MODIFY = ["srcPort", "srcIP", "protocol", "rand"]
 # All filtering decisions (0 --> accept, 1 --> drop)
 DECISIONS = ["(bv 0 4)", "(bv 1 4)", "(bv 2 4)", "(bv 3 4)", "(bv 4 4)", "(bv 5 4)", "(bv 6 4)", "(bv 7 4)"]
 
@@ -63,7 +65,7 @@ def gen_set_str(node_id, bindings):
     let_bindings = []  # list of "[var binding]" strings
 
     for v in VAR_NAMES:
-        if v != "rand" and v != "protocol":
+        if v not in VAR_NAMES_NO_MODIFY:
             const_val_name1 = f"Const{node_id}_{v}_1"
             const_val_name2 = f"Const{node_id}_{v}_2"
             bindings.append(f"[{const_val_name1}    (choose {' '.join(CMP_CONSTS)})]")
@@ -98,7 +100,7 @@ def gen_set_str(node_id, bindings):
 def gen_node(node_id, depth):
     """
     递归生成一个节点的 let* bindings 代码片段和该节点最终表达式名字。
-    返回：(bindings_str, expr_name)
+    return (bindings_str, expr_name)
     """
     expr_name = gen_expr_name(node_id)
 
@@ -115,7 +117,7 @@ def gen_node(node_id, depth):
         # (list (bv 5 4) srcPort srcIP dstPort dstIP protocol ctstate mark rand)
         return_parameters = ""
         for v in VAR_NAMES:
-            if v != "rand" and v != "protocol":
+            if v not in VAR_NAMES_NO_MODIFY:
                 return_parameters += f" {v}{node_id}"
             else:
                 return_parameters += f" {v}"
