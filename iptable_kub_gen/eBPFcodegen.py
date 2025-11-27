@@ -6,6 +6,8 @@ import json
 import re
 from sexpdata import loads, Symbol
 
+# ========== 小工具 ==========
+
 def sym_name(x):
     return x.value() if isinstance(x, Symbol) else x
 
@@ -94,39 +96,91 @@ def parse_expr(sexp):
 
     raise ValueError(f"Unknown expr: {sexp}")
 
-# ========== 变量替换 ==========
-def is_expr_symbol(name: str) -> bool:
-    return name.startswith("expr")
+# ========== 通用替换函数（带 stop_names） ==========
 
-def substitute_expr(node, env):
+def substitute_expr(node, env, stop_names=None):
+    """
+    通用 AST 替换：
+    - var 且在 env 中，则递归替换
+    - var 且在 stop_names 中，则停止展开
+    """
+    if stop_names is None:
+        stop_names = set()
+
     if isinstance(node, dict):
-
-        # 如果是 var
         if node.get("type") == "var":
             nm = node["name"]
-
-            # NEW: expr* 停止展开
-            if is_expr_symbol(nm):
+            if nm in stop_names:
                 return node
-
-            # 普通变量继续展开
             if nm in env:
-                return substitute_expr(env[nm], env)
-            else:
-                return node
+                return substitute_expr(env[nm], env, stop_names)
+            return node
 
-        # 递归处理子节点
-        out={}
-        for k,v in node.items():
-            out[k]=substitute_expr(v, env)
+        out = {}
+        for k, v in node.items():
+            out[k] = substitute_expr(v, env, stop_names)
         return out
 
-    elif isinstance(node,list):
-        return [substitute_expr(x, env) for x in node]
+    elif isinstance(node, list):
+        return [substitute_expr(x, env, stop_names) for x in node]
 
     else:
         return node
 
+# ========== 表达式转字符串（C风格） ==========
+
+def format_bv(v, w):
+    if w == 32:
+        return f"0x{v:08x}"
+    if w == 16:
+        return f"0x{v:04x}"
+    if w == 8:
+        return f"0x{v:02x}"
+    return str(v)
+
+def stringify_expr(ast):
+    t = ast.get("type")
+    if t == "var":
+        return ast["name"]
+    if t == "bv":
+        return format_bv(ast["value"], ast["width"])
+    if t in ("bveq", "bvand", "bvor"):
+        return stringify_condition(ast)
+    # 其它情况直接 json
+    return json.dumps(ast)
+
+def stringify_condition(ast):
+    t = ast.get("type")
+    if t == "bveq":
+        return f"({stringify_expr(ast['left'])} == {stringify_expr(ast['right'])})"
+    if t == "bvand":
+        return f"({stringify_expr(ast['left'])} & {stringify_expr(ast['right'])})"
+    if t == "bvor":
+        return f"({stringify_expr(ast['left'])} | {stringify_expr(ast['right'])})"
+    if t == "var":
+        return ast["name"]
+    if t == "bv":
+        return stringify_expr(ast)
+    return json.dumps(ast)
+
+# ========== 条件打印 ==========
+
+def print_conditions(env):
+    # 只用非 cond/expr 绑定去展开 cond*
+    env_base = {
+        k: v
+        for (k, v) in env.items()
+        if not (k.startswith("cond") or k.startswith("expr"))
+    }
+
+    print("\n===== Conditions (cond*) =====")
+    for nm in sorted(env.keys()):
+        if not nm.startswith("cond"):
+            continue
+        raw = env[nm]
+        expanded = substitute_expr(raw, env_base)
+        cond_str = stringify_condition(expanded)
+        print(f"{nm:10s}= {cond_str}")
 
 # ========== 从 define 里抽 let* ==========
 
@@ -178,7 +232,7 @@ def collect_consts(binds):
             consts[nm] = {
                 "value": info["value"],
                 "width": info["width"],
-                "hex": hex(info["value"]),
+                "hex": format_bv(info["value"], info["width"]),
             }
     return consts
 
@@ -188,6 +242,165 @@ def extract_from_define_text(raw):
         raise RuntimeError("No '(define ...' found")
     return raw[m.start():].strip()
 
+# ========== 构建 expr 决策结构 ==========
+
+def build_expr_structure(env):
+    """
+    返回: {exprName: {"kind":"decision"/"leaf", ...}}
+    decision 节点有: cond, then, else
+    leaf 节点只有 kind="leaf"
+    """
+    info = {}
+    for nm, ast in env.items():
+        if not nm.startswith("expr"):
+            continue
+
+        if ast.get("type") == "cond":
+            branches = ast.get("branches", [])
+            if len(branches) == 1:
+                body = branches[0]["body"]
+                if body.get("type") == "if":
+                    cond_ast = body["cond"]
+                    then_ast = body["then"]
+                    else_ast = body["else"]
+                    if (
+                        cond_ast.get("type") == "var"
+                        and then_ast.get("type") == "var"
+                        and else_ast.get("type") == "var"
+                    ):
+                        info[nm] = {
+                            "kind": "decision",
+                            "cond": cond_ast["name"],
+                            "then": then_ast["name"],
+                            "else": else_ast["name"],
+                        }
+                        continue
+                # 其它 cond 形式当 leaf 处理
+                info[nm] = {"kind": "leaf"}
+            else:
+                info[nm] = {"kind": "leaf"}
+        else:
+            info[nm] = {"kind": "leaf"}
+    return info
+
+def print_expr_tree(bodyname, expr_info):
+    print("\n===== Expression decision tree =====")
+
+    visited = set()
+
+    def dfs(name, indent=""):
+        if name in visited:
+            return
+        visited.add(name)
+
+        node = expr_info.get(name)
+        if node is None:
+            print(f"{indent}{name}: [no info]")
+            return
+
+        if node["kind"] == "decision":
+            cond = node["cond"]
+            th = node["then"]
+            el = node["else"]
+            print(f"{indent}{name}:")
+            print(f"{indent}  if {cond:6s} -> {th}")
+            print(f"{indent}  else    -> {el}")
+            dfs(th, indent + "  ")
+            dfs(el, indent + "  ")
+        else:
+            print(f"{indent}{name}: [leaf]")
+
+    dfs(bodyname)
+
+# ========== leaf expr 总结 ==========
+
+def summarize_leaf_expr(name, ast):
+    """
+    期望 leaf expr 形如:
+      (cond [else (let* (...) (list ...))])
+    或直接 (let* (...) (list ...))
+    """
+    print(f"\n{name}:")
+
+    # 去掉最外层 cond
+    if ast.get("type") == "cond":
+        branches = ast.get("branches", [])
+        if len(branches) != 1 or branches[0]["cond"] is not True:
+            print("  [complex leaf cond, raw AST:]")
+            print(json.dumps(ast, indent=2))
+            return
+        body = branches[0]["body"]
+    else:
+        body = ast
+
+    # let* 展开一次临时变量（只在本 expr 内）
+    if body.get("type") == "let*":
+        bindings = body["bindings"]
+        local_env = {k: v for (k, v) in bindings.items()}
+        final_body = substitute_expr(body["body"], local_env)
+    else:
+        final_body = body
+
+    if final_body.get("type") != "list":
+        print("  [unexpected leaf body (not list)]:")
+        print(json.dumps(final_body, indent=2))
+        return
+
+    items = final_body["items"]
+    if len(items) < 8:
+        print("  [unexpected list length]:", len(items))
+        print(json.dumps(final_body, indent=2))
+        return
+
+    # list: [ret srcPort srcIP dstPort dstIP protocol ctstate mark rand]
+    ret     = stringify_expr(items[0])
+    dstPort = stringify_expr(items[3])
+    dstIP   = stringify_expr(items[4])
+    ctstate = stringify_expr(items[6])
+    mark    = stringify_expr(items[7])
+
+    print(f"  decision(ret) = {ret}")
+    print(f"  dstPort       = {dstPort}")
+    print(f"  dstIP         = {dstIP}")
+    print(f"  ctstate       = {ctstate}")
+    print(f"  mark          = {mark}")
+
+def summarize_leaf_expr_json(name, ast):
+    # 期望 leaf expr 形如:
+    #   (cond [else (let* (...) (list ...))])
+    # 或直接 (let* (...) (list ...))
+
+    # 去掉最外层 cond
+    if ast.get("type") == "cond":
+        branches = ast.get("branches", [])
+        body = branches[0]["body"]
+    else:
+        body = ast
+
+    # let* 展开临时变量
+    if body.get("type") == "let*":
+        bindings = body["bindings"]
+        local_env = {k: v for (k, v) in bindings.items()}
+        final_body = substitute_expr(body["body"], local_env)
+    else:
+        final_body = body
+
+    items = final_body["items"]
+
+    # list: [ret srcPort srcIP dstPort dstIP protocol ctstate mark rand]
+    ret     = stringify_expr(items[0])
+    dstPort = stringify_expr(items[3])
+    dstIP   = stringify_expr(items[4])
+    ctstate = stringify_expr(items[6])
+    mark    = stringify_expr(items[7])
+
+    return {
+        "decision": ret,
+        "dstPort": dstPort,
+        "dstIP": dstIP,
+        "ctstate": ctstate,
+        "mark": mark,
+    }
 # ========== 主流程 ==========
 
 def main(path):
@@ -218,26 +431,31 @@ def main(path):
     for k, v in consts.items():
         print(f"{k:25s} = {v['hex']} ({v['value']}, {v['width']} bits)")
 
-    # 构建所有绑定的 AST 环境
+    # 构建所有 let* 绑定的 AST 环境
     env = {}
     for bp in binds:
         nm = sym_name(bp[0])
         env[nm] = parse_expr(bp[1])
 
-    # 为每一个以 "expr" 开头的绑定生成一个 fully-expanded AST
-    print("\n===== Fully-expanded expr* ASTs =====")
-    for nm in sorted(env.keys()):
-        if not nm.startswith("expr"):
-            continue
+    # 输出 cond* 含义
+    print_conditions(env)
 
-        # 避免展开自己时被自引用（虽然你这里不会）
-        env_for_this = dict(env)
-        # env_for_this.pop(nm, None)  # 理论上可以删掉自己，防止奇怪递归
+    # 构造 expr 决策结构
+    expr_info = build_expr_structure(env)
 
-        expanded = substitute_expr(env_for_this[nm], env_for_this)
-        print(f"\n--- expanded {nm} ---")
-        print(json.dumps(expanded, indent=2))
+    # 打印决策树（不展开 subexpr）
+    # print_expr_tree(bodyname, expr_info)
 
+    # 打印所有 leaf expr 的结果摘要
+    print("\n===== Leaf expr summaries =====")
+    json_result = {}
+    for nm, info in sorted(expr_info.items()):
+        if info["kind"] == "leaf":
+            json_result[nm] = summarize_leaf_expr_json(nm, env[nm])
+
+    print("\n===== JSON Leaf Output =====")
+    print(json.dumps(json_result, indent=2))
+    print("\n===== DONE =====")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
