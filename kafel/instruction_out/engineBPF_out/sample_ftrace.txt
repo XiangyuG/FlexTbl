@@ -1,0 +1,18 @@
+BPF program with 17 instructions
+  0: A := architecture
+  1: if A != 0xc000003e goto 16
+  2: A := syscall number
+  3: if A != 0x1 goto 16
+  4: A := arg 0 low
+  5: if A == 0x1 goto 15
+  6: if A == 0x2 goto 15
+  7: A := arg 1 high
+  8: if A != 0 goto 11
+  9: A := arg 1 low
+ 10: if A == 0 goto 15
+ 11: A := arg 2 high
+ 12: if A > 0 goto 16
+ 13: A := arg 2 low
+ 14: if A >= 0xa goto 16
+ 15: ALLOW
+ 16: KILL

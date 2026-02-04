@@ -1,0 +1,10 @@
+BPF program with 9 instructions
+  0: A := architecture
+  1: if A != 0xc000003e goto 7
+  2: A := syscall number
+  3: if A != 0x1 goto 7
+  4: A := arg 1 high
+  5: A := A & 0xf1f1f1f1
+  6: if A == 0xf1f1f1f1 goto 8
+  7: KILL
+  8: ALLOW
