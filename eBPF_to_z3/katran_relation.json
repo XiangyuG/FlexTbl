@@ -1,0 +1,30 @@
+{
+  "datatypes": {
+    "merged_val": "Val"
+  },
+  "z3_names": {
+    "original": {
+      "ctl_array": "ctl_array_0",
+      "cntrs_array": "cntrs_array_0"
+    },
+    "optimized": {
+      "merged_array": "merged_map_0"
+    }
+  },
+  "preconditions": [
+    "(Select(ctl_array_0_flag, BitVecVal(0, 32)) & Select(cntrs_array_0_flag, BitVecVal(0, 32))) == Select(merged_map_0_flag, BitVecVal(0, 32))",
+    "Select(ctl_array_0, BitVecVal(0, 32)) == Val.flag(Select(merged_map_0, BitVecVal(0, 32)))",
+    "Select(cntrs_array_0, BitVecVal(0, 32)) == Val.counter(Select(merged_map_0, BitVecVal(0, 32)))"
+  ],
+  "observable": {
+    "original": {
+      "map": "cntrs_array",
+      "key": 0
+    },
+    "optimized": {
+      "map": "merged_array",
+      "key": 0,
+      "field": "counter"
+    }
+  }
+}

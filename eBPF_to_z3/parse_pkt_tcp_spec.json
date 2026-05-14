@@ -1,0 +1,21 @@
+{
+  "sizes": {
+    "ethhdr": {
+      "const": "ETH_SZ",
+      "bytes": 14
+    },
+    "iphdr": {
+      "const": "IP_SZ",
+      "bytes": 20
+    },
+    "tcphdr": {
+      "const": "TCP_SZ",
+      "bytes": 20
+    },
+    "tcp_timestamp_opt": {
+      "const": "TS_SZ",
+      "bytes": 12
+    }
+  },
+  "observables": ["eth", "iph", "tcph", "ts_opt"]
+}
